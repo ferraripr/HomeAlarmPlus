@@ -1,0 +1,1 @@
+WebResources folders and Config.ini shoould be at the root level in the SD CARD.
