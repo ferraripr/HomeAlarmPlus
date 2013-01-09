@@ -174,29 +174,29 @@ namespace AlarmByZones
                     menu_Header = null;
                     break;
                 case "/pachube":
-                    //System.Collections.ArrayList alPachube = new System.Collections.ArrayList();
-                    //Pachube.EmbeddableGraphGenerator.EmbeddableHTML.GenerateHTML(alPachube);
-                    //context.Response.ContentType = "text/html";
-                    //context.Response.WriteLine("<html><head><title>Control Panel - Pachube Graphics</title>");
-                    //context.Response.WriteLine(AlarmByZones.Css_header);
-                    //context.Response.WriteLine(AlarmByZones.Table_CSS_Style);
-                    //context.Response.WriteLine("</head><body>");
-                    //context.Response.WriteLine("<h1>Alarm Activity - Monitor System #1</h1></br>");
-                    //context.Response.WriteLine(menu_Header);
-                    //context.Response.WriteLine("<p>Current Time: " + DateTime.Now + "</p></br>");
-                    //foreach (string content in alPachube)
-                    //{
-                    //    context.Response.WriteLine(content);
-                    //    context.Response.WriteLine("<br/>");
-                    //}
-                    //context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
-                    //context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    //context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
-                    //context.Response.WriteLine("</div></body></html>");
-                    ////clear variables
-                    //alPachube.Clear();
-                    //alPachube = null;
-                    //menu_Header = null;
+                    System.Collections.ArrayList alPachube = new System.Collections.ArrayList();
+                    Pachube.EmbeddableGraphGenerator.EmbeddableHTML.GenerateHTML(alPachube);
+                    context.Response.ContentType = "text/html";
+                    context.Response.WriteLine("<html><head><title>Control Panel - Pachube Graphics</title>");
+                    context.Response.WriteLine(AlarmByZones.Css_header);
+                    context.Response.WriteLine(AlarmByZones.Table_CSS_Style);
+                    context.Response.WriteLine("</head><body>");
+                    context.Response.WriteLine("<h1>Alarm Activity - Monitor System #1</h1></br>");
+                    context.Response.WriteLine(menu_Header);
+                    context.Response.WriteLine("<p>Current Time: " + DateTime.Now + "</p></br>");
+                    foreach (string content in alPachube)
+                    {
+                        context.Response.WriteLine(content);
+                        context.Response.WriteLine("<br/>");
+                    }
+                    context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
+                    context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("</div></body></html>");
+                    //clear variables
+                    alPachube.Clear();
+                    alPachube = null;
+                    menu_Header = null;
                     break;
                 case "/delete-confirm":
                     if (AlarmByZones.SdCardEventLogger.IsSDCardAvailable())
