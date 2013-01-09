@@ -44,6 +44,16 @@ namespace AlarmByZones.Alarm
             /// Alarm and sensor XML config file full path
             /// </summary>
             public const string ALARM_CONFIG_FILE_PATH = @"\SD\Config.ini";
+
+            /// <summary>
+            /// HTML table CSS style path.
+            /// </summary>
+            public const string HTML_RESOURCE_TABLE_STYLE = @"\SD\WebResources\table_style.css";
+
+            /// <summary>
+            /// HTML header CSS style path.
+            /// </summary>
+            public const string HTML_RESOURCE_HEADER_STYLE = @"\SD\WebResources\header_style.css";
         }
     }
 }

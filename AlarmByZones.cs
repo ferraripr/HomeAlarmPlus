@@ -8,7 +8,7 @@
  * the Creative Commons "Attribution 3.0 Unported" license.
  * http://creativecommons.org/licenses/by/3.0/
  * 
- * WARNING: This code contains information related to a typical home alarm systems.  Please, be aware that
+ * WARNING: This code contains information related to typical home alarm systems.  Please, be aware that
  * this procedure may void any warranty.
  * Any alarm system of any type may be compromised deliberately or may fail to
  * operate as expected for a variety of reasons.
@@ -31,8 +31,9 @@
  * - Netduino Plus
  * - SD Card
  * - Config.ini should be copied in the SD root directory.  If no SD card is detected default values will be considered.
- * - Sparkfun ProtoScrewShield (sku: DEV-09729)
- * - WiFi connection via WiFly or any WiFi Internet Adapter.  Tested on Netgear WNCE3001. 
+ * - Sparkfun ProtoScrewShield (sku: DEV-09729). Other shields that will work are: Proto-Screwshield (Wingshield) kit from Adafruit or 
+ *   WingShield Industries.
+ * - WiFi connection via WiFly or any WiFi Internet Adapter.  Tested with Netgear WNCE3001. 
  * 
  * OPTIONAL (If mounting Netduino inside the Alarm Panel):
  * - USB Ruggedized / Waterproof Panel Connector - for external access to USB port.
@@ -99,18 +100,47 @@
  *                                                                  Moved alarm definitions and constants to their own class.
  *                                                                  Modified comments on Config.ini file.
  *                                                                  
+ *   05-11-2012              20.0.0.0            G. García          Added delete-confirm, delete-last and delete Web Server option.
+ *                                                                  Renamed SDCard class to EventLogger.
+ *                                                                  
  *   05-11-2012              21.0.0.0            G. García          Renamed solution to HomeAlarmPlus.
  *                                                                  Code cleanup. Ready to share with Netduino community.
  *                                                                  
- *   06-10-2012              21.0.0.0            G. García          Added email tracking when accessing webserver.
+ *   06-10-2012              21.0.0.0            G. García          Added email tracking when accessing Web server.
  *                                                                  Added a fix (source: http://tf.nist.gov/tf-cgi/servers.cgi) NIST Internet Time Service
  *                                                                   instead of selecting a random one.
  *                                                                   
- *   06-14-2012              22.0.0.0                               HomeAlarmPlus base class library.
+ *   06-14-2012              22.0.0.0            G. García          HomeAlarmPlus base class library.
  *                                                                  Code cleanup. Ready to share library on github.
  *                                                                  Deleted unused references.
  *                                                                  Added Cascading Style Sheets (CSS) to HTML table (source http://www.textfixer.com/resources/css-tables.php).
- *                                                                  Added CSS to HTML button (source: http://www.pagetutor.com/button_designer/index.html).   
+ *                                                                  Added CSS to HTML button (source: http://www.pagetutor.com/button_designer/index.html).
+ *                                                                  
+ *   06-19-2012              23.0.0.0            G. García          Simplified Header CSS to consume less memory.
+ *   
+ *   06-22-2012              24.0.0.0            G. García          Added /diagnostics to Web server.
+ *                                                                  Minor modification to ResourceGenerator.Html.About
+ *                                                                  
+ *   06-27-2012              24.1.0.0            G. García          Modified diagnostics URL (/diag) to show SD Card available memory.
+ *                                                                  Fixed exception when deleting last file on SD Card.
+ *                                                                  
+ *   06-30-2012              24.2.0.0            G. García          Modified diagnostics URL (/diag) layout.
+ *   07-01-2012                                                     Fixed Memory Leak.
+ *   
+ *   07-05-2012              24.3.0.0            G. García          Deleted resources (header_style.css and table_style.css) from solution.  New
+ *                                                                  approach is to load files from SD Card.
+ *   07-06-2012                                                     Added fixed file path to SD and definitions on User_Definitions.Constants.   
+ *   
+ *   07-14-2012              24.4.0.0            G. García          Changed ProtoScrew blink LED to GPIO_PIN_D8.
+ *   
+ *   07-20-2012              25.0.0.0            G. García          Added MicroLiquidCrystal reference http://microliquidcrystal.codeplex.com/.
+ *   
+ *   07-21-2012              25.1.0.0            G. García          Added Power cycle monitor on diagnostics URL (/diag).
+ *   
+ *   11-03-2012              25.6.0.0            G. García          Modified AnalogInput parameters so that it follows the new .NET MicroFramework 4.2 QFE2.
+ *   
+ *   11-28-2012              25.7.0.0            G. García          Added SecretLabs.NETMF.Hardware.AnalogInput reference in order to work with .NET MicroFramework 4.2 QFE2.
+ *                                                                  Reverted AnalogInput parameters as before QFE2.
  */
 
 using System;
@@ -125,6 +155,7 @@ using Microsoft.SPOT;
 using Microsoft.SPOT.Hardware;
 using SecretLabs.NETMF.Hardware;
 using SecretLabs.NETMF.Hardware.NetduinoPlus;
+using SMTPClient;
 
 
 namespace AlarmByZones
@@ -142,7 +173,7 @@ namespace AlarmByZones
         /// <summary>
         /// Alarm zones (Analog Input)
         /// </summary>
-        static SecretLabs.NETMF.Hardware.AnalogInput[] Zones = new SecretLabs.NETMF.Hardware.AnalogInput[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
+        static Microsoft.SPOT.Hardware.AnalogInput[] Zones = new Microsoft.SPOT.Hardware.AnalogInput[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
 
         /// <summary>
         /// Alarm zones LEDs (Digital Output)
@@ -152,7 +183,7 @@ namespace AlarmByZones
         /// <summary>
         /// Motion detector sensors (Analog Input)
         /// </summary>
-        static SecretLabs.NETMF.Hardware.AnalogInput[] Sensors = new SecretLabs.NETMF.Hardware.AnalogInput[Alarm.User_Definitions.Constants.MOTION_SENSORS];
+        static Microsoft.SPOT.Hardware.AnalogInput[] Sensors = new Microsoft.SPOT.Hardware.AnalogInput[Alarm.User_Definitions.Constants.MOTION_SENSORS];
 
         /// <summary>
         /// Motion detector LEDs (Digital Output)
@@ -162,7 +193,7 @@ namespace AlarmByZones
         /// <summary>
         /// Gets the total elapsed time measured by the current instance of each alarm zone.
         /// </summary>
-        static System.Diagnostics.Stopwatch[] stopwatchZones = new Stopwatch[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
+        static System.Diagnostics.Stopwatch[] swZones = new Stopwatch[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
 
         /// <summary>
         /// Gets the total elapsed time measured by the current instance of each motion detector sensor.
@@ -180,6 +211,41 @@ namespace AlarmByZones
         /// </summary>
         static bool[] detectedSensors = new bool[Alarm.User_Definitions.Constants.MOTION_SENSORS];
 
+        /// <summary>
+        /// Email
+        /// </summary>     
+        /// <example> SMTPClient.Email("mail.gmx.com", 587, "user@gmx.com", "destination@email.com", "user password"); 
+        /// </example>
+        public static SMTPClient.Email email = new SMTPClient.Email(Alarm.UserData.Email.host, Alarm.UserData.Email.port,
+            Alarm.UserData.Email.From, Alarm.UserData.Email.To, Alarm.UserData.Email.smtpPassword);
+
+        /// <summary>
+        /// SD Card
+        /// </summary>
+        public static EventLogger SdCardEventLogger = new EventLogger();
+
+        /// <summary>
+        /// Header CSS style
+        /// </summary>
+        public static string Css_header = string.Empty;
+
+
+        /// <summary>
+        /// Table CSS style
+        /// </summary>
+        public static string Table_CSS_Style = string.Empty;
+
+        /// <summary>
+        /// Netduino IP Address
+        /// </summary>
+        private static string IPAddress = string.Empty;
+
+        /// <summary>
+        /// Last time since power cycle or reset
+        /// </summary>
+        public static string LastResetCycle = string.Empty;
+
+        
         #endregion
 
         #region Delegates
@@ -197,42 +263,17 @@ namespace AlarmByZones
 
         public static void Main()
         {
-            Zones[0] = new SecretLabs.NETMF.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_A0);
-            Zones[1] = new SecretLabs.NETMF.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_A1);
-            Zones[2] = new SecretLabs.NETMF.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_A2);
-            Zones[3] = new SecretLabs.NETMF.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_A3);
+            Zones[0] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A0);
+            Zones[1] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A1);
+            Zones[2] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A2);
+            Zones[3] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A3);
 
             AlarmLeds[0] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D2, false);
             AlarmLeds[1] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D3, false);
             AlarmLeds[2] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D4, false);
             AlarmLeds[3] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D5, false);
 
-            //Add description to every zone
-            ArrayList zoneDescription = new ArrayList();
-            zoneDescription.Add("Zone1=FIRST FLOOR - Living room windows, Dining room windows, Porch (sliding doors), Garage door access.");
-            zoneDescription.Add("Zone2=SECOND FLOOR - Master Bedroom and Bathroom Windows.");
-            zoneDescription.Add("Zone3=FIRST FLOOR - Master Bedroom windows.");
-            zoneDescription.Add("Zone4=SECOND FLOOR - Bedroom 2 and bathroom windows.");
-            for (int i = 0; i < Alarm.User_Definitions.Constants.ACTIVE_ZONES; i++)
-            {
-                string zone = (string)zoneDescription[i].ToString();
-                string[] parse = zone.Split('=');
-                Alarm.Common.Alarm_Info.zoneDescription.Add(parse[0], parse[1]);
-                Debug.Print("Zones " + parse[0] + " ," + parse[1]);
-            }
-
-            //Add description to every zone
-            ArrayList sensorDescription = new ArrayList();
-            sensorDescription.Add("Sensor1=Main door access");
-            for (int i = 0; i < Alarm.User_Definitions.Constants.MOTION_SENSORS; i++)
-            {
-                string sensor = (string)sensorDescription[i].ToString();
-                string[] parse = sensor.Split('=');
-                Alarm.Common.Alarm_Info.sensorDescription.Add(parse[0], parse[1]);
-                Debug.Print("Sensors " + parse[0] + " ," + parse[1]);
-            }
-
-            Sensors[0] = new SecretLabs.NETMF.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_A4);
+            Sensors[0] = new Microsoft.SPOT.Hardware.AnalogInput(AnalogChannels.ANALOG_PIN_A4);
             MotionLeds[0] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D7, false);
 
             MonitorZonesDelegate monitorZones = new MonitorZonesDelegate(MonitorZones);
@@ -240,12 +281,22 @@ namespace AlarmByZones
             MonitorMotionSensorDelegate monitorMotion = new MonitorMotionSensorDelegate(MonitorSensors);
 
             //based on a post by Valkyrie-MT
+            //http://forums.netduino.com/index.php?/topic/475-still-learning-internet-way-to-grab-date-and-time-on-startup/
             Debug.Print("Setting NTP-time");
             SetTime();
 
+            SdCardEventLogger.parseConfigFileContents(Alarm.User_Definitions.Constants.ALARM_CONFIG_FILE_PATH);
             InitArrays();
-            Debug.Print(Microsoft.SPOT.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()[0].IPAddress);
+            IPAddress = Microsoft.SPOT.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()[0].IPAddress;
+            Debug.Print(IPAddress);
+            LastResetCycle = DateTime.Now.ToString("ddd, d MMM yyyy HH:mm:ss \r\n");
+            SdCardEventLogger.SDCardAccess();
 
+            if (SdCardEventLogger.IsSDCardAvailable())
+            {
+                Table_CSS_Style = SdCardEventLogger.loadFileContent(Alarm.User_Definitions.Constants.HTML_RESOURCE_TABLE_STYLE);
+                Css_header = SdCardEventLogger.loadFileContent(Alarm.User_Definitions.Constants.HTML_RESOURCE_HEADER_STYLE);			
+			}
             new Thread(Alarm.ProtoScrewShield_LED.Blink).Start();
             //Web Server based on MFToolkit library by: Michael Schwarz 
             //download latest library at: (http://mftoolkit.codeplex.com/")
@@ -267,10 +318,17 @@ namespace AlarmByZones
         /// </summary>
         static void MonitorZones()
         {
+            int delayTime = 50;
             for (int i = 0; i < Zones.Length; i++)
             {
-                int vInput = Zones[i].Read();
-                float volts = ((float)vInput / 1024.0f) * 3.3f;
+			    //uncomment if using .NET MF 4.2 QFE1
+                //int vInput = Zones[i].Read();
+                //float volts = ((float)vInput / 1024.0f) * 3.3f;
+                
+				//if using .NET MF 4.2 QFE2
+				double vInput = Zones[i].Read();
+                float volts = ((float)vInput / 1024.0f) * 3.3f *1000;
+								
                 string strZoneDescription = "N/A"; //If zone description is not found on SD Card N/A is default description.
 
                 Debug.Print("Zone " + (i + 1).ToString() + ": Volts: " + volts);
@@ -278,15 +336,21 @@ namespace AlarmByZones
                 AlarmLeds[i].Write(volts >= 3);
 
                 //elapsed seconds
-                double eSeconds = stopwatchZones[i].ElapsedSeconds;
+                double eSeconds = swZones[i].ElapsedSeconds;
                 //elapsed minutes
-                double eMinutes = stopwatchZones[i].ElapsedMinutes;
+                double eMinutes = swZones[i].ElapsedMinutes;
 
                 Debug.Print("stopwatch[" + i.ToString() + "] = " + eSeconds.ToString() + " seconds");
                 Debug.Print("stopwatch[" + i.ToString() + "] = " + eMinutes.ToString() + " minutes\n");
 
                 if (volts >= 3)
                 {
+                   /*
+                      Case #1:
+                        !detectedZones[i] = not triggered before. This is the first time in this cycle and first email to send.
+                      Case #2:
+                        detectedZones[i] && eMinutes >= EMAIL_FREQUENCY = triggered before and time is up for sending another email.                     
+                     */
                     if (!detectedZones[i] || (detectedZones[i] && eMinutes >= Alarm.ConfigDefault.Data.EMAIL_FREQUENCY))
                     {
                         if (Alarm.Common.Alarm_Info.zoneDescription.Count > 0)
@@ -297,11 +361,21 @@ namespace AlarmByZones
                             }
                         }
                         string info = "Zone " + (i + 1).ToString() + " " + strZoneDescription;
-                        stopwatchZones[i] = Stopwatch.StartNew();
+                        swZones[i] = Stopwatch.StartNew();
                         detectedZones[i] = true;
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine(DateTime.Now.ToString());
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("Zone " + (i + 1).ToString());
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine(strZoneDescription);
+                        email.SendEmail("Alarm Trigger!", info + "\nIP Address: " + IPAddress);
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<tr>");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center>" + DateTime.Now.ToString() + "</center></td> ");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center> Zone " + (i + 1).ToString() + "</center></td>");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center>" + strZoneDescription + "</center></td>");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("</tr>");
+
+                        if (SdCardEventLogger.IsSDCardAvailable() && Alarm.ConfigDefault.Data.STORE_LOG)
+                        {
+                            SdCardEventLogger.saveFile(DateTime.Now.ToString("d_MMM_yyyy--HH_mm_ss") + ".log", info, "Log");
+                        }
+                        //clear variables
+                        info = null;
                     }
                 }
                 else
@@ -318,8 +392,14 @@ namespace AlarmByZones
         {
             for (int i = 0; i < Sensors.Length; i++)
             {
-                int vInput = Sensors[i].Read();
-                float volts = ((float)vInput / 1024.0f) * 3.3f;
+			    //uncomment if using .NET MF 4.2 QFE1
+                //int vInput = Sensors[i].Read();
+                //float volts = ((float)vInput / 1024.0f) * 3.3f;
+                
+				//if using .NET MF 4.2 QFE2
+				double vInput = Sensors[i].Read();
+                float volts = ((float)vInput / 1024.0f) * 3.3f *1000;
+
                 string strSensorDescription = "N/A"; //If sensor description is not found on SD Card N/A is default description.
 
 
@@ -353,9 +433,24 @@ namespace AlarmByZones
                         string info = "Sensor " + (i + 1).ToString() + " " + strSensorDescription;
                         stopwatchSensors[i] = Stopwatch.StartNew();
                         detectedSensors[i] = true;
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine(DateTime.Now.ToString());
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("Sensor " + (i + 1).ToString());
-                        Alarm.Common.Alarm_Info.sbActivity.AppendLine(strSensorDescription);
+                        email.SendEmail("Alarm Trigger!", info + "\nIP Address: " + IPAddress);
+						Alarm.Common.Alarm_Info.sbActivity.AppendLine("<tr>");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center>" + DateTime.Now.ToString() + "</center></td> ");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center> Sensor " + (i + 1).ToString() + "</center></td>");
+                        Alarm.Common.Alarm_Info.sbActivity.AppendLine("<td><center>" + strSensorDescription + "</center></td>");
+					    Alarm.Common.Alarm_Info.sbActivity.AppendLine("</tr>");
+                        if (Alarm.ConfigDefault.Data.USE_PACHUBE)
+                        {
+                            //supress timer and update Pachube with new status
+                            Pachube.PachubeLibrary.forceUpdate = true;
+                        }
+
+                        if (SdCardEventLogger.IsSDCardAvailable() && Alarm.ConfigDefault.Data.STORE_LOG)
+                        {
+                            SdCardEventLogger.saveFile(DateTime.Now.ToString("d_MMM_yyyy--HH_mm_ss") + ".log", info, "Log");
+                        }
+                        //clear variables
+                        info = null;						
                     }
                 }
                 else
@@ -368,12 +463,11 @@ namespace AlarmByZones
         /// <summary>
         /// Synchronize Netduino time with NTP Server
         /// </summary>
+        /// <seealso cref="http://forums.netduino.com/index.php?/topic/475-still-learning-internet-way-to-grab-date-and-time-on-startup/"/>
         public static void SetTime()
         {
-            //download Valkyrie-MT latest Extension class located at:
-            //http://forums.netduino.com/index.php?/topic/475-still-learning-internet-way-to-grab-date-and-time-on-startup/
-            //uncomment following line
-            //Extension.SetFromNetwork(DateTime.Now, new TimeSpan(-5, 0, 0));
+            //based on a post from user "Valkyrie-MT"
+            Extension.SetFromNetwork(DateTime.Now, new TimeSpan(-5, 0, 0));
         }
 
         /// <summary>
@@ -383,7 +477,7 @@ namespace AlarmByZones
         {
             for (int i = 0; i < Alarm.User_Definitions.Constants.ACTIVE_ZONES; i++)
             {
-                stopwatchZones[i] = Stopwatch.StartNew();
+                swZones[i] = Stopwatch.StartNew();
                 detectedZones[i] = false;
             }
 
