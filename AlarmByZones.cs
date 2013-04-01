@@ -1,5 +1,7 @@
 /* AlarmByZones.cs
  * 
+ * Copyright (c) 2012, 2013 by Gilberto García, twitter @ferraripr
+ * 
  * A simple alarm monitoring system using a typical alarm panel.  This implementation
  * could be used in conjunction with the P C 5 0 1 0 - Digital Security Controls (DSC) 
  * ProwerSeries Security System Control Panel and sensors .
@@ -141,6 +143,36 @@
  *   
  *   11-28-2012              25.7.0.0            G. García          Added SecretLabs.NETMF.Hardware.AnalogInput reference in order to work with .NET MicroFramework 4.2 QFE2.
  *                                                                  Reverted AnalogInput parameters as before QFE2.
+ *
+ *   01-18-2013              25.8.0.0            G. García          Added ATtinyx85 chip in order to minimize memory consumption (saved around 2k on deployed memory) .
+ *                                                                  Updated copyright year.
+ *                                                                  
+ *   02-03-2013              25.9.0.0            G. García          Hardware addition.  Added 75 dB Piezo Electric Buzzer (Radio Shack Model: 273-053).
+ *                                                                  Code cleanup.
+ *                                                                  
+ *   02-06-2013              26.0.0.0            G. García          Renamed EventLogger.cs to FileManagement.cs
+ *                                                                  Added PushingBox as HTTP notification service.   Used for email and Android notification service
+ *   
+ *   02-07-2013              26.1.0.0            G. García          Experimental version.
+ *   
+ *   02-08-2013              26.2.0.0            G. García          XBee implementation (experiment).
+ *                                                                  Added Microsoft.SPOT.Hardware.SerialPort reference.
+ *                                                                  
+ *   02-22-2013              26.3.0.0            G. García          Initial implementation of soft reset commanded from web server.
+ *   
+ *   03-01-2013              26.4.0.0            G. García          Fixed error when opening a file from webserver.
+ *                                                                  Added method on FileManagement.cs to save Logs and Exceptions on 
+ *                                                                    SD Card.  This implementation differ from previus one since everything
+ *                                                                    is stored in one file but different location.  No need to create a file
+ *                                                                    per Log and Exception events.
+ *                                                                    
+ *   03-09-2013              26.5.0.0            G. García          Added RF Receiver (Toggle Type) to arm or disarm alarm.
+ *                                                                  Deleted unused reference Microsoft.SPOT.Graphics.
+ *                                                                  
+ *   03-10-2013              27.0.0.0            G. García          [HomeAlarmPlusPi feature]From now on the following versions are going to rely more on a webserver.
+ *                                                                  CSS linked from webserver instead on being loaded on every process request.
+ *                                                                  Code cleanup.
+ *                                                                  Using Raspberry Pi to set the Netduino's Local Time.
  */
 
 using System;
@@ -155,7 +187,8 @@ using Microsoft.SPOT;
 using Microsoft.SPOT.Hardware;
 using SecretLabs.NETMF.Hardware;
 using SecretLabs.NETMF.Hardware.NetduinoPlus;
-using SMTPClient;
+using MicroLiquidCrystal;
+using System.IO.Ports;
 
 
 namespace AlarmByZones
@@ -173,22 +206,36 @@ namespace AlarmByZones
         /// <summary>
         /// Alarm zones (Analog Input)
         /// </summary>
-        static Microsoft.SPOT.Hardware.AnalogInput[] Zones = new Microsoft.SPOT.Hardware.AnalogInput[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
+        static Microsoft.SPOT.Hardware.AnalogInput[] Zones = {
+                                                                 new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A0),
+                                                                 new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A1),
+                                                                 new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A2),
+                                                                 new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A3)
+                                                             };
 
         /// <summary>
         /// Alarm zones LEDs (Digital Output)
         /// </summary>
-        static Microsoft.SPOT.Hardware.OutputPort[] AlarmLeds = new Microsoft.SPOT.Hardware.OutputPort[Alarm.User_Definitions.Constants.ACTIVE_ZONES];
+        static Microsoft.SPOT.Hardware.OutputPort[] AlarmLeds = {
+                                                                new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D2, false),
+                                                                new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D3, false),
+                                                                new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D4, false),
+                                                                new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D5, false)
+                                                                };
 
         /// <summary>
         /// Motion detector sensors (Analog Input)
         /// </summary>
-        static Microsoft.SPOT.Hardware.AnalogInput[] Sensors = new Microsoft.SPOT.Hardware.AnalogInput[Alarm.User_Definitions.Constants.MOTION_SENSORS];
+        static Microsoft.SPOT.Hardware.AnalogInput[] Sensors = {
+                                                                   new Microsoft.SPOT.Hardware.AnalogInput(AnalogChannels.ANALOG_PIN_A4)
+                                                               };
 
         /// <summary>
         /// Motion detector LEDs (Digital Output)
         /// </summary>
-        static Microsoft.SPOT.Hardware.OutputPort[] MotionLeds = new Microsoft.SPOT.Hardware.OutputPort[Alarm.User_Definitions.Constants.MOTION_SENSORS];
+        static Microsoft.SPOT.Hardware.OutputPort[] MotionLeds = {
+                                                                     new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D6, false)
+                                                                 };
 
         /// <summary>
         /// Gets the total elapsed time measured by the current instance of each alarm zone.
@@ -222,7 +269,7 @@ namespace AlarmByZones
         /// <summary>
         /// SD Card
         /// </summary>
-        public static EventLogger SdCardEventLogger = new EventLogger();
+        public static FileManagement SdCardEventLogger = new FileManagement();
 
         /// <summary>
         /// Header CSS style
@@ -246,6 +293,11 @@ namespace AlarmByZones
         public static string LastResetCycle = string.Empty;
 
         
+        /// <summary>
+        /// RF Receiver Toggle Type <seealso cref="https://www.adafruit.com/products/1097"/>
+        /// </summary>
+        static InputPort rfTogglePin = new InputPort(SecretLabs.NETMF.Hardware.NetduinoPlus.Pins.GPIO_PIN_D7,true,Port.ResistorMode.Disabled);
+        static SerialPort serialPort = new SerialPort("COM1", 9600, Parity.None, 8, StopBits.One);
         #endregion
 
         #region Delegates
@@ -263,18 +315,8 @@ namespace AlarmByZones
 
         public static void Main()
         {
-            Zones[0] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A0);
-            Zones[1] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A1);
-            Zones[2] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A2);
-            Zones[3] = new Microsoft.SPOT.Hardware.AnalogInput(SecretLabs.NETMF.Hardware.NetduinoPlus.AnalogChannels.ANALOG_PIN_A3);
+            serialPort.ReadTimeout = 0;
 
-            AlarmLeds[0] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D2, false);
-            AlarmLeds[1] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D3, false);
-            AlarmLeds[2] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D4, false);
-            AlarmLeds[3] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D5, false);
-
-            Sensors[0] = new Microsoft.SPOT.Hardware.AnalogInput(AnalogChannels.ANALOG_PIN_A4);
-            MotionLeds[0] = new Microsoft.SPOT.Hardware.OutputPort(Pins.GPIO_PIN_D7, false);
 
             MonitorZonesDelegate monitorZones = new MonitorZonesDelegate(MonitorZones);
 
@@ -372,7 +414,7 @@ namespace AlarmByZones
 
                         if (SdCardEventLogger.IsSDCardAvailable() && Alarm.ConfigDefault.Data.STORE_LOG)
                         {
-                            SdCardEventLogger.saveFile(DateTime.Now.ToString("d_MMM_yyyy--HH_mm_ss") + ".log", info, "Log");
+                            SdCardEventLogger.saveLog(DateTime.Now.ToString("dMMMyyyy-HH:mm:ss") + ": " + info, "Log");
                         }
                         //clear variables
                         info = null;
@@ -381,6 +423,19 @@ namespace AlarmByZones
                 else
                 {
                     detectedZones[i] = false;
+                    
+                    //if any zone is active (detectedZones == true)
+                    if (Array.IndexOf(detectedZones, true) > -1 )
+                    {
+                        //soundAlarmPin.Write(true);
+                        soundAlarmPin.Write(rfTogglePin.Read());
+                        sendToXBee("1");
+                    }
+                    else
+                    {
+                        soundAlarmPin.Write(false);
+                        sendToXBee("0");
+                    }                    
                 }
             }
         }
@@ -447,7 +502,7 @@ namespace AlarmByZones
 
                         if (SdCardEventLogger.IsSDCardAvailable() && Alarm.ConfigDefault.Data.STORE_LOG)
                         {
-                            SdCardEventLogger.saveFile(DateTime.Now.ToString("d_MMM_yyyy--HH_mm_ss") + ".log", info, "Log");
+                            SdCardEventLogger.saveLog(DateTime.Now.ToString("d_MMM_yyyy--HH_mm_ss") + ".log", info, "Log");
                         }
                         //clear variables
                         info = null;						
@@ -487,6 +542,24 @@ namespace AlarmByZones
                 detectedSensors[i] = false;
             }
         }
+        /// <summary>
+        /// Send status to XBee
+        /// </summary>
+        /// <param name="status"></param>
+        private static void sendToXBee(string status)
+        {
+            try
+            {
+                serialPort.Open();
+                string s = status;
+                serialPort.Write(Encoding.UTF8.GetBytes(s), 0, s.Length);
+            }
+            finally
+            {
+                serialPort.Close();
+            }
+
+        }		
         #endregion
 
     }

@@ -27,15 +27,15 @@ namespace AlarmByZones
             }
 
             string menu_Header =
-                "<div>" +
-                "<ul>" +
-                "<li class=\"current\"><a href=\"/\" title='Home'>HOME</a></li>" +
-                "<li><a href='/sdcard' title='Retrieve alarm events stored in SD Card'>SD CARD EVENT LOG</a></li>" +
+                "<div>\n" +
+                "<ul>\n" +
+                "<li class=\"current\"><a href=\"/\" title='Home'>HOME</a></li>\n" +
+                "<li><a href='/sdcard' title='Retrieve alarm events stored in SD Card'>SD CARD EVENT LOG</a></li>\n" +
                 menu_Pachube + menu_SuperUser +
-                "<li><a href='/diag'  title='Diagnostics'>DIAGNOSTICS</a> </li>" +
-                "<li><a href='/about' title='Credits and contributors'>ABOUT</a> </li>" +
-                "</ul>" +
-                "</div>";
+                "<li><a href='/diag'  title='Diagnostics'>DIAGNOSTICS</a> </li>\n" +
+                "<li><a href='/about' title='Credits and contributors'>ABOUT</a> </li>\n" +
+                "</ul>\n" +
+                "</div>\n";
             string fileLink = string.Empty;
             try
             {
@@ -66,7 +66,7 @@ namespace AlarmByZones
                     context.Response.ContentType = "text/html";
                     context.Response.WriteLine("<html><head><title>Control Panel - Home</title>");
                     context.Response.WriteLine("<meta name=\"author\"   content=\"Gilberto García\"/>");
-                    context.Response.WriteLine("<meta name=\"mod-date\" content=\"06/24/2012\"/>");
+                    context.Response.WriteLine("<meta name=\"mod-date\" content=\"03/31/2013\"/>");
                     context.Response.WriteLine(AlarmByZones.Css_header);
                     context.Response.WriteLine(AlarmByZones.Table_CSS_Style);
                     context.Response.WriteLine("</head><body>");
@@ -77,12 +77,13 @@ namespace AlarmByZones
                     context.Response.WriteLine("</table>");
                     context.Response.WriteLine("<br/><br/>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     //clear variables
                     HTML_tbHeader = null;
                     AlarmStatus = null;
                     menu_Header = null;
+                    rawURL_string = null;
                     break;
                 case "/about":
                     string about = Properties.Resources.GetString(Properties.Resources.StringResources.about);
@@ -90,6 +91,7 @@ namespace AlarmByZones
                     context.Response.WriteLine(about);
                     //clear variables
                     about = null;
+                    rawURL_string = null;
                     break;
                 case "/sdcard":
                     context.Response.ContentType = "text/html";
@@ -119,14 +121,14 @@ namespace AlarmByZones
                     }
                     else
                     {
-                        context.Response.WriteLine(AlarmByZones.SdCardEventLogger.NO_SD_CARD);
-                        context.Response.WriteLine("<br/>");
+                        context.Response.WriteLine(AlarmByZones.SdCardEventLogger.NO_SD_CARD + "<br>");
                     }
-                    context.Response.WriteLine("<br/>");
+                    context.Response.WriteLine("<br>");
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
+                    rawURL_string = null;
                     break;
                 case "/open":
                     System.Collections.ArrayList alOpen = new System.Collections.ArrayList();
@@ -163,15 +165,16 @@ namespace AlarmByZones
                     {
                         context.Response.WriteLine(AlarmByZones.SdCardEventLogger.NO_SD_CARD);
                     }
-                    context.Response.WriteLine("<br/><br/>");
+                    context.Response.WriteLine("<br><br>");
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     //clear variables
                     alOpen.Clear();
                     alOpen = null;
                     menu_Header = null;
+                    rawURL_string = null;
                     break;
                 case "/pachube":
                     System.Collections.ArrayList alPachube = new System.Collections.ArrayList();
@@ -191,12 +194,13 @@ namespace AlarmByZones
                     }
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     //clear variables
                     alPachube.Clear();
                     alPachube = null;
                     menu_Header = null;
+                    rawURL_string = null;
                     break;
                 case "/delete-confirm":
                     if (AlarmByZones.SdCardEventLogger.IsSDCardAvailable())
@@ -227,7 +231,7 @@ namespace AlarmByZones
                         {
                             context.Response.WriteLine("No files to delete.");
                         }
-                        context.Response.WriteLine("<br/><br/>");
+                        context.Response.WriteLine("<br><br>");
                         //clear variables
                         rawHref = null;
                         parseHref = null;
@@ -235,9 +239,10 @@ namespace AlarmByZones
                     }
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     menu_Header = null;
+                    rawURL_string = null;
                     break;
                 case "/delete":
                 case "/delete-last":
@@ -278,7 +283,7 @@ namespace AlarmByZones
                     }
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     menu_Header = null;
                     break;
@@ -295,7 +300,7 @@ namespace AlarmByZones
                     context.Response.ContentType = "text/html";
                     context.Response.WriteLine("<html><head><title>Control Panel - Diagnostics</title>");
                     context.Response.WriteLine("<meta name=\"author\"   content=\"Gilberto García\"/>");
-                    context.Response.WriteLine("<meta name=\"mod-date\" content=\"07/01/2012\"/>");
+                    context.Response.WriteLine("<meta name=\"mod-date\" content=\"03/31/2013\"/>");
                     context.Response.WriteLine("</head><body>");
                     context.Response.WriteLine("<h1>Alarm Activity - Monitor System #1 - Diagnostics</h1>");
                     context.Response.WriteLine("Current Time: " + DateTime.Now + "<br/>");
@@ -316,7 +321,7 @@ namespace AlarmByZones
                     context.Response.WriteLine("<br/><br/>");
                     context.Response.WriteLine("<a href=\"/\">Back to main page...</a>");
                     context.Response.WriteLine("<div style=\"border:1px solid #CCCCCC;\">");
-                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012 Gilberto Garc&#237;a</span></p>");
+                    context.Response.WriteLine("<p><span class=\"note\">Copyright &#169; 2012, 2013 Gilberto Garc&#237;a</span></p>");
                     context.Response.WriteLine("</div></body></html>");
                     break;
                 default:
